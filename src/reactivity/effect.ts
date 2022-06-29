@@ -7,8 +7,8 @@ class ReactiveEffect {
   private _fn: any;
   public scheduler?: Function;
   active: boolean = true;
-  deps = new Set()
-  onStop?: Function 
+  deps = new Set();
+  onStop?: Function;
   constructor(fn: Function, scheduler?) {
     this._fn = fn;
     this.scheduler = scheduler;
@@ -20,21 +20,21 @@ class ReactiveEffect {
     }
 
     // 当active为true时代表可以继续收集依赖 需要打开开关shouldTrack
-    shouldTrack = true
+    shouldTrack = true;
     activeEffect = this;
     const res = this._fn();
     // 执行完函数后将开关关上，因为可能会有其他ReactiveEffect对象用到这个公共的开关
-    shouldTrack = false
-    
-    return res
+    shouldTrack = false;
+
+    return res;
   }
   stop() {
     if (this.active) {
-      cleanupEffect(this)
+      cleanupEffect(this);
       if (this.onStop) {
-        this.onStop()
+        this.onStop();
       }
-      this.active = false
+      this.active = false;
     }
   }
 }
@@ -63,6 +63,11 @@ export function track(target, key) {
     depsMap.set(key, dep);
   }
 
+  trackEffects(dep);
+}
+
+export function trackEffects(dep) {
+  if (!isTracking()) return;
   dep.add(activeEffect);
   activeEffect.deps.add(dep);
 }
@@ -74,6 +79,10 @@ function isTracking() {
 export function trigger(target, key) {
   let depsMap = targetMap.get(target);
   let dep = depsMap.get(key);
+  triggerEffects(dep);
+}
+
+export function triggerEffects(dep) {
   dep.forEach((effect) => {
     if (effect.scheduler) {
       effect.scheduler();
@@ -93,7 +102,7 @@ export function effect(fn: Function, options: effectOptions = {}) {
   extend(_effect, options);
   _effect.run();
   const runner: any = _effect.run.bind(_effect);
-  runner.effect = _effect
+  runner.effect = _effect;
   return runner;
 }
 
