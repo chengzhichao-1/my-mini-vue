@@ -4,12 +4,13 @@ import { reactive } from "./reactive";
 
 class RefImpl {
   private _value;
-  private _rawValue
+  private _rawValue;
   private dep;
+  public __v_isRef = true;
   constructor(value) {
-    this._rawValue = value
+    this._rawValue = value;
     this._value = convert(value);
-    this.dep = new Set()
+    this.dep = new Set();
   }
 
   get value() {
@@ -32,4 +33,12 @@ export function ref(value) {
 
 function convert(value) {
   return isObject(value) ? reactive(value) : value;
+}
+
+export function isRef(ref) {
+  return !!ref.__v_isRef;
+}
+
+export function unRef(ref) {
+  return isRef(ref) ? ref.value : ref;
 }
