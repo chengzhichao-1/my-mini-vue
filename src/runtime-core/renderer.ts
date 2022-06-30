@@ -18,21 +18,23 @@ function processElement(vnode: any, container: any) {
 }
 
 function mountElement(vnode: any, container: any) {
-  const el = document.createElement(vnode.type);
+  const el = (vnode.el = document.createElement(vnode.type));
 
-  if (vnode.props) {
+  const { props } = vnode;
+  if (props) {
     for (const key in vnode.props) {
       el.setAttribute(key, vnode.props[key]);
     }
   }
 
-  if (typeof vnode.children === "string") {
-    el.textContent = vnode.children;
-  } else if (Array.isArray(vnode.children)) {
+  const { children } = vnode;
+  if (typeof children === "string") {
+    el.textContent = children;
+  } else if (Array.isArray(children)) {
     mountChildren(vnode, el);
   }
 
-  container.append(el)
+  container.append(el);
 }
 
 function mountChildren(vnode, container) {
@@ -45,15 +47,18 @@ function processComponent(vnode: any, container: any) {
   mountComponent(vnode, container);
 }
 
-function mountComponent(vnode: any, container) {
-  const instance = createComponentInstance(vnode);
+function mountComponent(initialVNode: any, container) {
+  const instance = createComponentInstance(initialVNode);
 
   setupComponent(instance);
-  setupRenderEffect(instance, container);
+  setupRenderEffect(instance, initialVNode, container);
 }
 
-function setupRenderEffect(instance: any, container) {
-  const subTree = instance.render();
+function setupRenderEffect(instance: any, initialVNode: any, container) {
+  const { proxy } = instance;
+  const subTree = instance.render.call(proxy);
 
   patch(subTree, container);
+
+  initialVNode.el = subTree.el;
 }
