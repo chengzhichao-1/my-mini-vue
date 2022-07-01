@@ -1,6 +1,7 @@
 import {
   h
 } from "../../lib/guide-mini-vue.esm.js";
+import { Foo } from "./Foo.js";
 
 window.self = null;
 export const App = {
@@ -19,11 +20,17 @@ export const App = {
           console.log("mousedown");
         }
       },
-      "hi, " + this.msg
+      // "hi, " + this.msg
       // string
       // "hi, mini-vue"
       // Array
       // [h("p", { class:"red"}, "hi"), h("p", {class:"blue"}, "mini-vue")]
+      [
+        h("div", {}, "hi," + this.msg),
+        h(Foo, {
+          count: 1,
+        }),
+      ]
     );
   },
 
