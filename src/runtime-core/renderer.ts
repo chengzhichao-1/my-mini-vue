@@ -24,7 +24,14 @@ function mountElement(vnode: any, container: any) {
   const { props } = vnode;
   if (props) {
     for (const key in vnode.props) {
-      el.setAttribute(key, vnode.props[key]);
+      const val = props[key];
+      const isOn = (key: string) => /^on[A-Z]/.test(key);
+      if (isOn(key)) {
+        const event = key.slice(2).toLowerCase();
+        el.addEventListener(event, val);
+      } else {
+        el.setAttribute(key, val);
+      }
     }
   }
 

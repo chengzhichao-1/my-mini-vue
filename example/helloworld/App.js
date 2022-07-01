@@ -1,4 +1,6 @@
-import { h } from "../../lib/guide-mini-vue.esm.js";
+import {
+  h
+} from "../../lib/guide-mini-vue.esm.js";
 
 window.self = null;
 export const App = {
@@ -7,10 +9,15 @@ export const App = {
     window.self = this;
     // ui
     return h(
-      "div",
-      {
+      "div", {
         id: "root",
         class: ["red", "hard"],
+        onClick() {
+          console.log("click");
+        },
+        onMousedown() {
+          console.log("mousedown");
+        }
       },
       "hi, " + this.msg
       // string
