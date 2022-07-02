@@ -34,7 +34,7 @@ export const App = {
     //     }),
     //   ]
     // );
-    
+
     // emit
     return h("div", {}, [
       h("div", {}, "App"),
