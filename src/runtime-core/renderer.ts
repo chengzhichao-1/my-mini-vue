@@ -9,6 +9,8 @@ export function createRenderer(options) {
     createElement: hostCreateElement,
     patchProp: hostPatchProp,
     insert: hostInsert,
+    remove: hostRemove,
+    setElementText: hostSetElementText,
   } = options;
 
   function render(vnode, container) {
@@ -41,18 +43,18 @@ export function createRenderer(options) {
   }
 
   function processFragment(n1, n2: any, container: any, parentComponent) {
-    mountChildren(n2, container, parentComponent);
+    mountChildren(n2.children, container, parentComponent);
   }
 
   function processElement(n1, n2: any, container: any, parentComponent) {
     if (!n1) {
       mountElement(n2, container, parentComponent);
     } else {
-      patchElement(n1, n2, container);
+      patchElement(n1, n2, container, parentComponent);
     }
   }
 
-  function patchElement(n1, n2, container) {
+  function patchElement(n1, n2, container, parentComponent) {
     console.log("patchElement");
 
     console.log(n1, n2);
@@ -62,6 +64,7 @@ export function createRenderer(options) {
     const el = (n2.el = n1.el);
 
     patchProps(el, oldProps, newProps);
+    patchChildren(el, n1, n2, container, parentComponent);
   }
 
   function patchProps(el, oldProps, newProps) {
@@ -78,6 +81,35 @@ export function createRenderer(options) {
       if (!(key in newProps)) {
         hostPatchProp(el, key, oldProps[key], null);
       }
+    }
+  }
+
+  function patchChildren(el, n1: any, n2: any, container, parentComponent) {
+    const { children: prevChildren, shapeFlag: prevShapeFlag } = n1;
+    const { children: nextChildren, shapeFlag: nextShapeFlag } = n2;
+    if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (nextShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        hostSetElementText(el, "");
+        mountChildren(nextChildren, container, parentComponent);
+      } else {
+        if (prevChildren !== nextChildren) {
+          hostSetElementText(el, nextChildren);
+        }
+      }
+    } else {
+      if (nextShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        unmountChildren(prevChildren);
+        hostSetElementText(el, nextChildren);
+      } else {
+        // TODO children - children
+      }
+    }
+  }
+
+  function unmountChildren(children) {
+    for (let i = 0; i < children.length; i++) {
+      const el = children[i].el;
+      hostRemove(el);
     }
   }
 
@@ -103,7 +135,7 @@ export function createRenderer(options) {
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       el.textContent = children;
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(vnode, el, parentComponent);
+      mountChildren(vnode.children, el, parentComponent);
     }
 
     // container.append(el);
@@ -111,8 +143,8 @@ export function createRenderer(options) {
     hostInsert(el, container);
   }
 
-  function mountChildren(vnode, container, parentComponent) {
-    vnode.children.forEach((v) => {
+  function mountChildren(children: any, container, parentComponent) {
+    children.forEach((v) => {
       patch(null, v, container, parentComponent);
     });
   }
