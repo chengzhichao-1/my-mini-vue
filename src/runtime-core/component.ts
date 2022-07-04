@@ -3,19 +3,23 @@ import { emit } from "./componentEmit";
 import { initProps } from "./componentProps";
 import { initSlots } from "./componentSlots";
 import { PublicInstanceProxyHandlers } from "./componentPublicInstance";
+import { proxyRefs } from "../reactivity";
 
 export function createComponentInstance(vnode, parent) {
   console.log("createComponentInstance", parent);
-  
+
   const component = {
     vnode,
     type: vnode.type,
     setupState: {},
+    proxy: null,
     props: {},
     emit: () => {},
     slots: {},
     provides: parent ? Object.create(parent.provides) : {},
     parent,
+    isMounted: false,
+    subtree: {},
   };
 
   component.emit = emit.bind(null, component) as any;
@@ -54,7 +58,7 @@ function handleSetupResult(instance, setupResult: any) {
   // function Object
   // TODO function
   if (typeof setupResult === "object") {
-    instance.setupState = setupResult;
+    instance.setupState = proxyRefs(setupResult);
   }
 
   finishComponentSetup(instance);
