@@ -5,7 +5,11 @@ import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
 
 export function createRenderer(options) {
-  const { createElement, patchProp, insert } = options;
+  const {
+    createElement: hostCreateElement,
+    patchProp: hostPatchProp,
+    insert: hostInsert,
+  } = options;
 
   function render(vnode, container) {
     patch(null, vnode, container, null);
@@ -52,10 +56,33 @@ export function createRenderer(options) {
     console.log("patchElement");
 
     console.log(n1, n2);
+
+    const oldProps = n1.props || {};
+    const newProps = n2.props || {};
+    const el = (n2.el = n1.el);
+
+    patchProps(el, oldProps, newProps);
+  }
+
+  function patchProps(el, oldProps, newProps) {
+    if (oldProps === newProps) return;
+
+    for (const key in newProps) {
+      const oldVal = oldProps[key];
+      const newVal = newProps[key];
+      if (oldVal !== newVal) {
+        hostPatchProp(el, key, oldVal, newVal);
+      }
+    }
+    for (const key in oldProps) {
+      if (!(key in newProps)) {
+        hostPatchProp(el, key, oldProps[key], null);
+      }
+    }
   }
 
   function mountElement(vnode: any, container: any, parentComponent) {
-    const el = (vnode.el = createElement(vnode.type));
+    const el = (vnode.el = hostCreateElement(vnode.type));
 
     const { props } = vnode;
     if (props) {
@@ -68,7 +95,7 @@ export function createRenderer(options) {
         // } else {
         //   el.setAttribute(key, val);
         // }
-        patchProp(el, key, val);
+        hostPatchProp(el, key, null, val);
       }
     }
 
@@ -81,7 +108,7 @@ export function createRenderer(options) {
 
     // container.append(el);
 
-    insert(el, container);
+    hostInsert(el, container);
   }
 
   function mountChildren(vnode, container, parentComponent) {
