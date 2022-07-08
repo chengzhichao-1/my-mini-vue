@@ -216,7 +216,7 @@ export function createRenderer(options) {
         patchedNum = 0;
       const toBePatched = e2 - s2 + 1;
       const keyToIndexMap = new Map();
-      debugger;
+      const newIndexToOldIndexMap = new Array(toBePatched).fill(-1) // 
       for (let i = s2; i <= e2; i++) {
         keyToIndexMap.set(nextChildren[i].key, i);
       }
@@ -238,7 +238,8 @@ export function createRenderer(options) {
           }
         }
 
-        if (lastIndex !== undefined) {
+        if (lastIndex !== undefined) { // 在新的节点中找到和老的节点相同节点类型和相同key的元素
+          newIndexToOldIndexMap[lastIndex - s2] = i // key 新节点中间元素从左到右 下标从0开始 value对应老节点的下标
           patch(
             prevChildren[i],
             nextChildren[lastIndex],
@@ -247,8 +248,30 @@ export function createRenderer(options) {
             null
           );
           patchedNum++;
-        } else {
+        } else { // 没找到
           hostRemove(prevChildren[i].el);
+        }
+      }
+
+      // 移动 (节点存在于新的和老的里面，但是位置变了)
+      // (A B) C D E (F G)
+      // (A B) E C D (F G)
+      // i = 2 e1 = 4 e2 = 4
+      debugger
+      // 求最长递增子序列 返回值为下标
+      const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap)
+      let j = increasingNewIndexSequence.length - 1 // 初始化为指向最长递增子序列中的最后一个元素的指针
+      // 策略 从后往前遍历 新的中间节点与最长递增子序列的返回值
+      for (let i = toBePatched - 1; i >= 0; i--) {
+        const nextIndex = i + s2 // 记录在nextChildren中的真实下标
+        let anchor = nextIndex + 1 > nextChildren.length - 1 ? null : nextChildren[nextIndex + 1].el
+
+        if (newIndexToOldIndexMap[i] === -1) { // 新的元素不在老的序列中 则创建
+          patch(null, nextChildren[nextIndex], container, parentComponent, anchor)
+        } else if(j >= 0 && increasingNewIndexSequence[j] === i) { // 若在最长递增子序列中 则将指针j往前移动
+          j--
+        } else { // 若不在最长递增子序列中 则移动位置
+          hostInsert(nextChildren[nextIndex].el, container, anchor)
         }
       }
     }
@@ -348,4 +371,45 @@ export function createRenderer(options) {
   return {
     createApp: createAppAPI(render),
   };
+}
+
+function getSequence(arr) {
+  const p = arr.slice();
+  const result = [0];
+  let i, j, u, v, c;
+  const len = arr.length;
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i];
+    if (arrI !== 0) {
+      j = result[result.length - 1];
+      if (arr[j] < arrI) {
+        p[i] = j;
+        result.push(i);
+        continue;
+      }
+      u = 0;
+      v = result.length - 1;
+      while (u < v) {
+        c = (u + v) >> 1;
+        if (arr[result[c]] < arrI) {
+          u = c + 1;
+        } else {
+          v = c;
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1];
+        }
+        result[u] = i;
+      }
+    }
+  }
+  u = result.length;
+  v = result[u - 1];
+  while (u-- > 0) {
+    result[u] = v;
+    v = p[v];
+  }
+  return result;
 }
