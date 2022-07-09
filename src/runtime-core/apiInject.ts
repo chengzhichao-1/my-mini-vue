@@ -1,7 +1,6 @@
 import { getCurrentInstance } from "./component";
 
 export function provide(key, value) {
-  console.log(key, value);
   const instance = getCurrentInstance();
 
   if (instance) {
@@ -12,7 +11,6 @@ export function provide(key, value) {
 }
 
 export function inject(key, defaultValue) {
-  console.log(key);
   const instance: any = getCurrentInstance();
   const parentProvides = instance.parent.provides;
 

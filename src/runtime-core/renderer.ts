@@ -3,6 +3,7 @@ import { ShapeFlags } from "../shared/ShapeFlags";
 import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
+import { shouldUpdateComponent } from "./componentUpdateUtils";
 
 export function createRenderer(options) {
   const {
@@ -28,7 +29,7 @@ export function createRenderer(options) {
         break;
       default:
         if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-          processComponent(n2, container, parentComponent, anchor);
+          processComponent(n1, n2, container, parentComponent, anchor);
         } else if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, parentComponent, anchor);
         }
@@ -56,11 +57,11 @@ export function createRenderer(options) {
     if (!n1) {
       mountElement(n2, container, parentComponent, anchor);
     } else {
-      patchElement(n1, n2, parentComponent, anchor);
+      patchElement(n1, n2, container, parentComponent, anchor);
     }
   }
 
-  function patchElement(n1, n2, parentComponent, anchor) {
+  function patchElement(n1, n2, container, parentComponent, anchor) {
     console.log("patchElement");
 
     console.log(n1, n2);
@@ -70,7 +71,7 @@ export function createRenderer(options) {
     const el = (n2.el = n1.el);
 
     patchProps(el, oldProps, newProps);
-    patchChildren(el, n1, n2, el, parentComponent, anchor);
+    patchChildren(el, n1, n2, container, parentComponent, anchor);
   }
 
   function patchProps(el, oldProps, newProps) {
@@ -136,7 +137,6 @@ export function createRenderer(options) {
     let i = 0,
       e1 = prevChildren.length - 1,
       e2 = nextChildren.length - 1;
-    debugger;
     const isSameVNodeType = (n1, n2) => {
       return n1.type === n2.type && n1.key === n2.key;
     };
@@ -216,7 +216,7 @@ export function createRenderer(options) {
         patchedNum = 0;
       const toBePatched = e2 - s2 + 1;
       const keyToIndexMap = new Map();
-      const newIndexToOldIndexMap = new Array(toBePatched).fill(-1) // 
+      const newIndexToOldIndexMap = new Array(toBePatched).fill(-1); //
       for (let i = s2; i <= e2; i++) {
         keyToIndexMap.set(nextChildren[i].key, i);
       }
@@ -238,8 +238,9 @@ export function createRenderer(options) {
           }
         }
 
-        if (lastIndex !== undefined) { // 在新的节点中找到和老的节点相同节点类型和相同key的元素
-          newIndexToOldIndexMap[lastIndex - s2] = i // key 新节点中间元素从左到右 下标从0开始 value对应老节点的下标
+        if (lastIndex !== undefined) {
+          // 在新的节点中找到和老的节点相同节点类型和相同key的元素
+          newIndexToOldIndexMap[lastIndex - s2] = i; // key 新节点中间元素从左到右 下标从0开始 value对应老节点的下标
           patch(
             prevChildren[i],
             nextChildren[lastIndex],
@@ -248,7 +249,8 @@ export function createRenderer(options) {
             null
           );
           patchedNum++;
-        } else { // 没找到
+        } else {
+          // 没找到
           hostRemove(prevChildren[i].el);
         }
       }
@@ -257,21 +259,32 @@ export function createRenderer(options) {
       // (A B) C D E (F G)
       // (A B) E C D (F G)
       // i = 2 e1 = 4 e2 = 4
-      debugger
       // 求最长递增子序列 返回值为下标
-      const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap)
-      let j = increasingNewIndexSequence.length - 1 // 初始化为指向最长递增子序列中的最后一个元素的指针
+      const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
+      let j = increasingNewIndexSequence.length - 1; // 初始化为指向最长递增子序列中的最后一个元素的指针
       // 策略 从后往前遍历 新的中间节点与最长递增子序列的返回值
       for (let i = toBePatched - 1; i >= 0; i--) {
-        const nextIndex = i + s2 // 记录在nextChildren中的真实下标
-        let anchor = nextIndex + 1 > nextChildren.length - 1 ? null : nextChildren[nextIndex + 1].el
+        const nextIndex = i + s2; // 记录在nextChildren中的真实下标
+        let anchor =
+          nextIndex + 1 > nextChildren.length - 1
+            ? null
+            : nextChildren[nextIndex + 1].el;
 
-        if (newIndexToOldIndexMap[i] === -1) { // 新的元素不在老的序列中 则创建
-          patch(null, nextChildren[nextIndex], container, parentComponent, anchor)
-        } else if(j >= 0 && increasingNewIndexSequence[j] === i) { // 若在最长递增子序列中 则将指针j往前移动
-          j--
-        } else { // 若不在最长递增子序列中 则移动位置
-          hostInsert(nextChildren[nextIndex].el, container, anchor)
+        if (newIndexToOldIndexMap[i] === -1) {
+          // 新的元素不在老的序列中 则创建
+          patch(
+            null,
+            nextChildren[nextIndex],
+            container,
+            parentComponent,
+            anchor
+          );
+        } else if (j >= 0 && increasingNewIndexSequence[j] === i) {
+          // 若在最长递增子序列中 则将指针j往前移动
+          j--;
+        } else {
+          // 若不在最长递增子序列中 则移动位置
+          hostInsert(nextChildren[nextIndex].el, container, anchor);
         }
       }
     }
@@ -320,8 +333,30 @@ export function createRenderer(options) {
     });
   }
 
-  function processComponent(n2: any, container: any, parentComponent, anchor) {
-    mountComponent(n2, container, parentComponent, anchor);
+  function processComponent(
+    n1: any,
+    n2: any,
+    container: any,
+    parentComponent,
+    anchor
+  ) {
+    if (!n1) {
+      mountComponent(n2, container, parentComponent, anchor);
+    } else {
+      debugger;
+      updateComponent(n1, n2);
+    }
+  }
+
+  function updateComponent(n1: any, n2: any) {
+    const instance = (n2.component = n1.component);
+    n2.el = n1.el;
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.nextVNode = n2;
+      instance.update();
+    } else {
+      instance.vnode = n2;
+    }
   }
 
   function mountComponent(
@@ -330,7 +365,10 @@ export function createRenderer(options) {
     parentComponent,
     anchor
   ) {
-    const instance = createComponentInstance(initialVNode, parentComponent);
+    const instance = (initialVNode.component = createComponentInstance(
+      initialVNode,
+      parentComponent
+    ));
 
     setupComponent(instance);
     setupRenderEffect(instance, initialVNode, container, anchor);
@@ -342,9 +380,7 @@ export function createRenderer(options) {
     container,
     anchor
   ) {
-    console.log("instance", instance);
-
-    effect(() => {
+    instance.update = effect(() => {
       if (!instance.isMounted) {
         console.log("init");
         const { proxy } = instance;
@@ -357,13 +393,18 @@ export function createRenderer(options) {
         instance.isMounted = true;
       } else {
         console.log("update");
+
+        const { nextVNode } = instance;
+        if (nextVNode) {
+          updateComponentPreRender(instance, nextVNode);
+        }
+
         const { proxy } = instance;
         const subTree = instance.render.call(proxy);
         const prevSubTree = instance.subTree;
+        instance.subTree = subTree;
 
         patch(prevSubTree, subTree, container, instance, anchor);
-
-        initialVNode.el = subTree.el;
       }
     });
   }
@@ -371,6 +412,12 @@ export function createRenderer(options) {
   return {
     createApp: createAppAPI(render),
   };
+}
+
+function updateComponentPreRender(instance, nextVNode) {
+  instance.vnode = nextVNode;
+  instance.nextVNode = null;
+  instance.props = nextVNode.props;
 }
 
 function getSequence(arr) {

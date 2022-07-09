@@ -20,6 +20,7 @@ export function createComponentInstance(vnode, parent) {
     parent,
     isMounted: false,
     subtree: {},
+    update: null, // effect返回值
   };
 
   component.emit = emit.bind(null, component) as any;
