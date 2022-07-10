@@ -27,7 +27,6 @@ function parseChildren(context) {
 
   let node
   let s = context.source
-  s = s.trim()
   if (s.startsWith("{{")) {
     node = parseInterpolation(context)
   } else if (s[0] === "<") {
@@ -36,8 +35,30 @@ function parseChildren(context) {
     }
   }
 
+  if (!node) {
+    node = parseText(context);
+  }
+
   nodes.push(node)
   return nodes
+}
+
+function parseText(context: any) {
+  // 1. 获取content
+  const content = parseTextData(context, context.source.length);
+
+  return {
+    type: NodeTypes.TEXT,
+    content,
+  };
+}
+
+function parseTextData(context: any, length) {
+  const content = context.source.slice(0, length);
+
+  // 2. 推进
+  advanceBy(context, length);
+  return content;
 }
 
 function parseElement(context: any) {
@@ -76,10 +97,10 @@ function parseInterpolation(context) {
   
   const closeIndex = context.source.indexOf(closeDelimiter)
   const rawContentLength = closeIndex
-  const rawContent = context.source.slice(0, rawContentLength)
+  const rawContent = parseTextData(context, rawContentLength);
   const content = rawContent.trim()
   
-  advanceBy(context, rawContentLength + closeDelimiter.length)
+  advanceBy(context, closeDelimiter.length)
 
   return {
     type: NodeTypes.INTERPOLATION,
