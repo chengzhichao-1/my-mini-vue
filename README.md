@@ -13,15 +13,11 @@
 
 ## 整体架构
 
-![](.\README.assets\image-20220805191326744.png)
+![](https://raw.githubusercontent.com/chengzhichao-1/my-mini-vue/main/README.assets/image-20220805191326744.png)
 
 编译
 
 compiler-sfc解析.vue文件
-
-
-
-
 
 运行时
 
